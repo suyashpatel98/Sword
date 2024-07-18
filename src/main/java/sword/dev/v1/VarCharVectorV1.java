@@ -1,26 +1,28 @@
-package sword.dev;
+package sword.dev.v1;
 
 import sword.dev.type.SwordType;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
-public class IntVector implements FieldVector {
-    private final SwordType.Int type;
-    private int[] values;
-    private int valueCount;
+public class VarCharVectorV1 implements FieldVectorV1 {
+    private final SwordType.Utf8 type;
+    private List<String> values;
     private String name;
     private boolean nullable;
+    private int valueCount;
 
-    public IntVector() {
-        this("", new SwordType.Int(32)); // Assuming 32-bit integers by default
+    public VarCharVectorV1() {
+        this("", new SwordType.Utf8());
     }
 
-    public IntVector(String name, SwordType.Int type) {
+    public VarCharVectorV1(String name, SwordType.Utf8 type) {
         this.name = name;
         this.type = type;
-        this.values = new int[0];
+        this.values = new ArrayList<>();
+        this.nullable = true;
         this.valueCount = 0;
-        this.nullable = false;
     }
 
     @Override
@@ -40,18 +42,18 @@ public class IntVector implements FieldVector {
 
     @Override
     public void allocateNew() {
-        values = new int[10]; // Initial capacity of 10, can be adjusted
+        values = new ArrayList<>(10); // Initial capacity of 10, can be adjusted
         valueCount = 0;
     }
 
     @Override
     public int getValueCapacity() {
-        return values.length;
+        return values.size();
     }
 
     @Override
     public boolean isNull(int index) {
-        return false; // sword.dev.IntVector doesn't support null values
+        return index >= valueCount || values.get(index) == null;
     }
 
     @Override
@@ -62,11 +64,14 @@ public class IntVector implements FieldVector {
     @Override
     public void setValueCount(int valueCount) {
         this.valueCount = valueCount;
+        while (values.size() < valueCount) {
+            values.add(null);
+        }
     }
 
     @Override
     public void clear() {
-        values = new int[0];
+        values.clear();
         valueCount = 0;
     }
 
@@ -81,9 +86,9 @@ public class IntVector implements FieldVector {
     }
 
     @Override
-    public void copyFrom(int fromIndex, int thisIndex, ValueVector from) {
-        if (from instanceof IntVector) {
-            IntVector fromVector = (IntVector) from;
+    public void copyFrom(int fromIndex, int thisIndex, ValueVectorV1 from) {
+        if (from instanceof VarCharVectorV1) {
+            VarCharVectorV1 fromVector = (VarCharVectorV1) from;
             set(thisIndex, fromVector.get(fromIndex));
         } else {
             throw new IllegalArgumentException("Cannot copy from " + from.getClass().getSimpleName());
@@ -91,17 +96,17 @@ public class IntVector implements FieldVector {
     }
 
     @Override
-    public FieldVector getNewVector() {
-        return new IntVector(name, type);
+    public FieldVectorV1 getNewVector() {
+        return new VarCharVectorV1(name, type);
     }
 
     @Override
-    public void transferTo(FieldVector target) {
-        if (target instanceof IntVector) {
-            IntVector targetVector = (IntVector) target;
+    public void transferTo(FieldVectorV1 target) {
+        if (target instanceof VarCharVectorV1) {
+            VarCharVectorV1 targetVector = (VarCharVectorV1) target;
             targetVector.values = this.values;
             targetVector.valueCount = this.valueCount;
-            this.values = new int[0];
+            this.values = new ArrayList<>();
             this.valueCount = 0;
         } else {
             throw new IllegalArgumentException("Cannot transfer to " + target.getClass().getSimpleName());
@@ -109,24 +114,22 @@ public class IntVector implements FieldVector {
     }
 
     @Override
-    public void copySubset(int fromIndex, int toIndex, FieldVector target, int targetIndex) {
-        if (target instanceof IntVector) {
-            IntVector targetVector = (IntVector) target;
-            int length = toIndex - fromIndex;
-            System.arraycopy(this.values, fromIndex, targetVector.values, targetIndex, length);
-            targetVector.valueCount = Math.max(targetVector.valueCount, targetIndex + length);
+    public void copySubset(int fromIndex, int toIndex, FieldVectorV1 target, int targetIndex) {
+        if (target instanceof VarCharVectorV1) {
+            VarCharVectorV1 targetVector = (VarCharVectorV1) target;
+            for (int i = fromIndex; i < toIndex; i++) {
+                targetVector.set(targetIndex + i - fromIndex, this.get(i));
+            }
         } else {
             throw new IllegalArgumentException("Cannot copy subset to " + target.getClass().getSimpleName());
         }
     }
 
     @Override
-    public FieldVector slice(int start, int end) {
-        IntVector sliced = new IntVector(name + "[" + start + "," + end + "]", type);
-        int length = end - start;
-        sliced.values = new int[length];
-        System.arraycopy(this.values, start, sliced.values, 0, length);
-        sliced.valueCount = length;
+    public FieldVectorV1 slice(int start, int end) {
+        VarCharVectorV1 sliced = new VarCharVectorV1(name + "[" + start + "," + end + "]", type);
+        sliced.values = new ArrayList<>(this.values.subList(start, end));
+        sliced.valueCount = end - start;
         return sliced;
     }
 
@@ -142,35 +145,48 @@ public class IntVector implements FieldVector {
 
     @Override
     public int getNullCount() {
-        return 0; // sword.dev.IntVector doesn't support null values
+        int nullCount = 0;
+        for (int i = 0; i < valueCount; i++) {
+            if (isNull(i)) {
+                nullCount++;
+            }
+        }
+        return nullCount;
     }
 
     @Override
     public void set(int index, Object value) {
-        if (value instanceof Integer) {
-            set(index, (int) value);
+        if (value == null) {
+            setNull(index);
+        } else if (value instanceof String) {
+            set(index, (String) value);
         } else {
-            throw new IllegalArgumentException("Value must be an Integer");
+            throw new IllegalArgumentException("Value must be a String or null");
         }
     }
 
     @Override
     public void setSafe(int index, Object value) {
-        if (index >= values.length) {
-            int[] newValues = new int[Math.max(index + 1, values.length * 2)];
-            System.arraycopy(values, 0, newValues, 0, values.length);
-            values = newValues;
+        while (index >= values.size()) {
+            values.add(null);
         }
         set(index, value);
     }
 
-    public void set(int index, int value) {
-        values[index] = value;
+    public void set(int index, String value) {
+        while (index >= values.size()) {
+            values.add(null);
+        }
+        values.set(index, value);
         valueCount = Math.max(valueCount, index + 1);
     }
 
-    public int get(int index) {
-        return values[index];
+    public String get(int index) {
+        return values.get(index);
+    }
+
+    public void setNull(int index) {
+        set(index, null);
     }
 
     @Override

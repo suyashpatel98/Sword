@@ -1,9 +1,9 @@
-package sword.dev;
+package sword.dev.v1;
 
 import sword.dev.type.SwordType;
 
 
-public interface FieldVector extends ValueVector {
+public interface FieldVectorV1 extends ValueVectorV1 {
 
     /**
      * Get the SwordType of this vector.
@@ -31,14 +31,14 @@ public interface FieldVector extends ValueVector {
      *
      * @return a new empty instance of the same sword.dev.type of vector
      */
-    FieldVector getNewVector();
+    FieldVectorV1 getNewVector();
 
     /**
      * Transfer the data from this vector to another vector of the same sword.dev.type.
      *
      * @param target the target vector to transfer data to
      */
-    void transferTo(FieldVector target);
+    void transferTo(FieldVectorV1 target);
 
     /**
      * Copy a subset of the data from this vector to another vector of the same sword.dev.type.
@@ -48,7 +48,7 @@ public interface FieldVector extends ValueVector {
      * @param target the target vector to copy data to
      * @param targetIndex the starting index in the target vector to copy to
      */
-    void copySubset(int fromIndex, int toIndex, FieldVector target, int targetIndex);
+    void copySubset(int fromIndex, int toIndex, FieldVectorV1 target, int targetIndex);
 
     /**
      * Get a slice of this vector.
@@ -57,7 +57,7 @@ public interface FieldVector extends ValueVector {
      * @param end the ending index (exclusive) of the slice
      * @return a new sword.dev.FieldVector representing the slice
      */
-    FieldVector slice(int start, int end);
+    FieldVectorV1 slice(int start, int end);
 
     /**
      * Check if this vector is nullable (can contain null values).

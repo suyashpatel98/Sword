@@ -1,28 +1,26 @@
-package sword.dev;
+package sword.dev.v1;
 
 import sword.dev.type.SwordType;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
-public class VarCharVector implements FieldVector {
-    private final SwordType.Utf8 type;
-    private List<String> values;
+public class TinyIntVectorV1 implements FieldVectorV1 {
+    private final SwordType.TinyInt type;
+    private byte[] values;
+    private int valueCount;
     private String name;
     private boolean nullable;
-    private int valueCount;
 
-    public VarCharVector() {
-        this("", new SwordType.Utf8());
+    public TinyIntVectorV1() {
+        this("", new SwordType.TinyInt());
     }
 
-    public VarCharVector(String name, SwordType.Utf8 type) {
+    public TinyIntVectorV1(String name, SwordType.TinyInt type) {
         this.name = name;
         this.type = type;
-        this.values = new ArrayList<>();
-        this.nullable = true;
+        this.values = new byte[0];
         this.valueCount = 0;
+        this.nullable = false;
     }
 
     @Override
@@ -42,18 +40,18 @@ public class VarCharVector implements FieldVector {
 
     @Override
     public void allocateNew() {
-        values = new ArrayList<>(10); // Initial capacity of 10, can be adjusted
+        values = new byte[10]; // Initial capacity of 10, can be adjusted
         valueCount = 0;
     }
 
     @Override
     public int getValueCapacity() {
-        return values.size();
+        return values.length;
     }
 
     @Override
     public boolean isNull(int index) {
-        return index >= valueCount || values.get(index) == null;
+        return false; // sword.dev.TinyIntVector doesn't support null values
     }
 
     @Override
@@ -64,14 +62,11 @@ public class VarCharVector implements FieldVector {
     @Override
     public void setValueCount(int valueCount) {
         this.valueCount = valueCount;
-        while (values.size() < valueCount) {
-            values.add(null);
-        }
     }
 
     @Override
     public void clear() {
-        values.clear();
+        values = new byte[0];
         valueCount = 0;
     }
 
@@ -86,9 +81,9 @@ public class VarCharVector implements FieldVector {
     }
 
     @Override
-    public void copyFrom(int fromIndex, int thisIndex, ValueVector from) {
-        if (from instanceof VarCharVector) {
-            VarCharVector fromVector = (VarCharVector) from;
+    public void copyFrom(int fromIndex, int thisIndex, ValueVectorV1 from) {
+        if (from instanceof TinyIntVectorV1) {
+            TinyIntVectorV1 fromVector = (TinyIntVectorV1) from;
             set(thisIndex, fromVector.get(fromIndex));
         } else {
             throw new IllegalArgumentException("Cannot copy from " + from.getClass().getSimpleName());
@@ -96,17 +91,17 @@ public class VarCharVector implements FieldVector {
     }
 
     @Override
-    public FieldVector getNewVector() {
-        return new VarCharVector(name, type);
+    public FieldVectorV1 getNewVector() {
+        return new TinyIntVectorV1(name, type);
     }
 
     @Override
-    public void transferTo(FieldVector target) {
-        if (target instanceof VarCharVector) {
-            VarCharVector targetVector = (VarCharVector) target;
+    public void transferTo(FieldVectorV1 target) {
+        if (target instanceof TinyIntVectorV1) {
+            TinyIntVectorV1 targetVector = (TinyIntVectorV1) target;
             targetVector.values = this.values;
             targetVector.valueCount = this.valueCount;
-            this.values = new ArrayList<>();
+            this.values = new byte[0];
             this.valueCount = 0;
         } else {
             throw new IllegalArgumentException("Cannot transfer to " + target.getClass().getSimpleName());
@@ -114,22 +109,24 @@ public class VarCharVector implements FieldVector {
     }
 
     @Override
-    public void copySubset(int fromIndex, int toIndex, FieldVector target, int targetIndex) {
-        if (target instanceof VarCharVector) {
-            VarCharVector targetVector = (VarCharVector) target;
-            for (int i = fromIndex; i < toIndex; i++) {
-                targetVector.set(targetIndex + i - fromIndex, this.get(i));
-            }
+    public void copySubset(int fromIndex, int toIndex, FieldVectorV1 target, int targetIndex) {
+        if (target instanceof TinyIntVectorV1) {
+            TinyIntVectorV1 targetVector = (TinyIntVectorV1) target;
+            int length = toIndex - fromIndex;
+            System.arraycopy(this.values, fromIndex, targetVector.values, targetIndex, length);
+            targetVector.valueCount = Math.max(targetVector.valueCount, targetIndex + length);
         } else {
             throw new IllegalArgumentException("Cannot copy subset to " + target.getClass().getSimpleName());
         }
     }
 
     @Override
-    public FieldVector slice(int start, int end) {
-        VarCharVector sliced = new VarCharVector(name + "[" + start + "," + end + "]", type);
-        sliced.values = new ArrayList<>(this.values.subList(start, end));
-        sliced.valueCount = end - start;
+    public FieldVectorV1 slice(int start, int end) {
+        TinyIntVectorV1 sliced = new TinyIntVectorV1(name + "[" + start + "," + end + "]", type);
+        int length = end - start;
+        sliced.values = new byte[length];
+        System.arraycopy(this.values, start, sliced.values, 0, length);
+        sliced.valueCount = length;
         return sliced;
     }
 
@@ -145,48 +142,35 @@ public class VarCharVector implements FieldVector {
 
     @Override
     public int getNullCount() {
-        int nullCount = 0;
-        for (int i = 0; i < valueCount; i++) {
-            if (isNull(i)) {
-                nullCount++;
-            }
-        }
-        return nullCount;
+        return 0; // sword.dev.TinyIntVector doesn't support null values
     }
 
     @Override
     public void set(int index, Object value) {
-        if (value == null) {
-            setNull(index);
-        } else if (value instanceof String) {
-            set(index, (String) value);
+        if (value instanceof Byte) {
+            set(index, (byte) value);
         } else {
-            throw new IllegalArgumentException("Value must be a String or null");
+            throw new IllegalArgumentException("Value must be a Byte");
         }
     }
 
     @Override
     public void setSafe(int index, Object value) {
-        while (index >= values.size()) {
-            values.add(null);
+        if (index >= values.length) {
+            byte[] newValues = new byte[Math.max(index + 1, values.length * 2)];
+            System.arraycopy(values, 0, newValues, 0, values.length);
+            values = newValues;
         }
         set(index, value);
     }
 
-    public void set(int index, String value) {
-        while (index >= values.size()) {
-            values.add(null);
-        }
-        values.set(index, value);
+    public void set(int index, byte value) {
+        values[index] = value;
         valueCount = Math.max(valueCount, index + 1);
     }
 
-    public String get(int index) {
-        return values.get(index);
-    }
-
-    public void setNull(int index) {
-        set(index, null);
+    public byte get(int index) {
+        return values[index];
     }
 
     @Override

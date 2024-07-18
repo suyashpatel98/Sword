@@ -1,24 +1,24 @@
-package sword.dev;
+package sword.dev.v1;
 
 import sword.dev.type.SwordType;
 
 import java.util.Iterator;
 
-public class TinyIntVector implements FieldVector {
-    private final SwordType.TinyInt type;
-    private byte[] values;
+public class IntVectorV1 implements FieldVectorV1 {
+    private final SwordType.Int type;
+    private int[] values;
     private int valueCount;
     private String name;
     private boolean nullable;
 
-    public TinyIntVector() {
-        this("", new SwordType.TinyInt());
+    public IntVectorV1() {
+        this("", new SwordType.Int(32)); // Assuming 32-bit integers by default
     }
 
-    public TinyIntVector(String name, SwordType.TinyInt type) {
+    public IntVectorV1(String name, SwordType.Int type) {
         this.name = name;
         this.type = type;
-        this.values = new byte[0];
+        this.values = new int[0];
         this.valueCount = 0;
         this.nullable = false;
     }
@@ -40,7 +40,7 @@ public class TinyIntVector implements FieldVector {
 
     @Override
     public void allocateNew() {
-        values = new byte[10]; // Initial capacity of 10, can be adjusted
+        values = new int[10]; // Initial capacity of 10, can be adjusted
         valueCount = 0;
     }
 
@@ -51,7 +51,7 @@ public class TinyIntVector implements FieldVector {
 
     @Override
     public boolean isNull(int index) {
-        return false; // sword.dev.TinyIntVector doesn't support null values
+        return false; // sword.dev.IntVector doesn't support null values
     }
 
     @Override
@@ -66,7 +66,7 @@ public class TinyIntVector implements FieldVector {
 
     @Override
     public void clear() {
-        values = new byte[0];
+        values = new int[0];
         valueCount = 0;
     }
 
@@ -81,9 +81,9 @@ public class TinyIntVector implements FieldVector {
     }
 
     @Override
-    public void copyFrom(int fromIndex, int thisIndex, ValueVector from) {
-        if (from instanceof TinyIntVector) {
-            TinyIntVector fromVector = (TinyIntVector) from;
+    public void copyFrom(int fromIndex, int thisIndex, ValueVectorV1 from) {
+        if (from instanceof IntVectorV1) {
+            IntVectorV1 fromVector = (IntVectorV1) from;
             set(thisIndex, fromVector.get(fromIndex));
         } else {
             throw new IllegalArgumentException("Cannot copy from " + from.getClass().getSimpleName());
@@ -91,17 +91,17 @@ public class TinyIntVector implements FieldVector {
     }
 
     @Override
-    public FieldVector getNewVector() {
-        return new TinyIntVector(name, type);
+    public FieldVectorV1 getNewVector() {
+        return new IntVectorV1(name, type);
     }
 
     @Override
-    public void transferTo(FieldVector target) {
-        if (target instanceof TinyIntVector) {
-            TinyIntVector targetVector = (TinyIntVector) target;
+    public void transferTo(FieldVectorV1 target) {
+        if (target instanceof IntVectorV1) {
+            IntVectorV1 targetVector = (IntVectorV1) target;
             targetVector.values = this.values;
             targetVector.valueCount = this.valueCount;
-            this.values = new byte[0];
+            this.values = new int[0];
             this.valueCount = 0;
         } else {
             throw new IllegalArgumentException("Cannot transfer to " + target.getClass().getSimpleName());
@@ -109,9 +109,9 @@ public class TinyIntVector implements FieldVector {
     }
 
     @Override
-    public void copySubset(int fromIndex, int toIndex, FieldVector target, int targetIndex) {
-        if (target instanceof TinyIntVector) {
-            TinyIntVector targetVector = (TinyIntVector) target;
+    public void copySubset(int fromIndex, int toIndex, FieldVectorV1 target, int targetIndex) {
+        if (target instanceof IntVectorV1) {
+            IntVectorV1 targetVector = (IntVectorV1) target;
             int length = toIndex - fromIndex;
             System.arraycopy(this.values, fromIndex, targetVector.values, targetIndex, length);
             targetVector.valueCount = Math.max(targetVector.valueCount, targetIndex + length);
@@ -121,10 +121,10 @@ public class TinyIntVector implements FieldVector {
     }
 
     @Override
-    public FieldVector slice(int start, int end) {
-        TinyIntVector sliced = new TinyIntVector(name + "[" + start + "," + end + "]", type);
+    public FieldVectorV1 slice(int start, int end) {
+        IntVectorV1 sliced = new IntVectorV1(name + "[" + start + "," + end + "]", type);
         int length = end - start;
-        sliced.values = new byte[length];
+        sliced.values = new int[length];
         System.arraycopy(this.values, start, sliced.values, 0, length);
         sliced.valueCount = length;
         return sliced;
@@ -142,34 +142,34 @@ public class TinyIntVector implements FieldVector {
 
     @Override
     public int getNullCount() {
-        return 0; // sword.dev.TinyIntVector doesn't support null values
+        return 0; // sword.dev.IntVector doesn't support null values
     }
 
     @Override
     public void set(int index, Object value) {
-        if (value instanceof Byte) {
-            set(index, (byte) value);
+        if (value instanceof Integer) {
+            set(index, (int) value);
         } else {
-            throw new IllegalArgumentException("Value must be a Byte");
+            throw new IllegalArgumentException("Value must be an Integer");
         }
     }
 
     @Override
     public void setSafe(int index, Object value) {
         if (index >= values.length) {
-            byte[] newValues = new byte[Math.max(index + 1, values.length * 2)];
+            int[] newValues = new int[Math.max(index + 1, values.length * 2)];
             System.arraycopy(values, 0, newValues, 0, values.length);
             values = newValues;
         }
         set(index, value);
     }
 
-    public void set(int index, byte value) {
+    public void set(int index, int value) {
         values[index] = value;
         valueCount = Math.max(valueCount, index + 1);
     }
 
-    public byte get(int index) {
+    public int get(int index) {
         return values[index];
     }
 

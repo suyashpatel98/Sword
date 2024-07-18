@@ -1,10 +1,10 @@
-package sword.dev;
+package sword.dev.v1;
 
 import sword.dev.type.SwordType;
 
 import java.io.Closeable;
 
-public interface ValueVector extends Closeable, Iterable<Object> {
+public interface ValueVectorV1 extends Closeable, Iterable<Object> {
 
     /**
      * Allocate new buffers for the vector.
@@ -58,7 +58,7 @@ public interface ValueVector extends Closeable, Iterable<Object> {
      * @param thisIndex position to copy to in this vector
      * @param from source vector
      */
-    void copyFrom(int fromIndex, int thisIndex, ValueVector from);
+    void copyFrom(int fromIndex, int thisIndex, ValueVectorV1 from);
 
     /**
      * Get the sword.dev.type of the vector.
