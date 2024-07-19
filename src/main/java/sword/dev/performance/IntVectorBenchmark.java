@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @State(Scope.Thread)
-@Fork(value = 2, jvmArgs = {"-XX:+UnlockExperimentalVMOptions", "-XX:+EnableVectorSupport", "--add-modules=jdk.incubator.vector"})
+@Fork(value = 2, jvmArgs = {"-XX:+UnlockExperimentalVMOptions", "-XX:+EnableVectorSupport", "--add-modules=jdk.incubator.vector", "-XX:-UseSuperWord"})
 @Warmup(iterations = 2, time = 1)
 @Measurement(iterations = 2, time = 1)
 public class IntVectorBenchmark {
@@ -42,7 +42,7 @@ public class IntVectorBenchmark {
 
     @Benchmark
     public void setSimdBenchmark() {
-        vector.setSimd(0, values);
+            vector.setSimd(0, values);
     }
 
     /*

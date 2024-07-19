@@ -227,23 +227,18 @@ public class IntVectorV2 extends BaseValueVectorV2 implements FieldVectorV2 {
     }
 
     public void setSimd(int index, int[] values) {
-        int vectorLength = IntVector.SPECIES_256.length();
-        int loopBound = values.length / vectorLength;
+        VectorSpecies<Integer> SPECIES = IntVector.SPECIES_PREFERRED;
+        int vectorLength = SPECIES.length();
+        int loopBound = SPECIES.loopBound(values.length);
 
         for (int i = 0; i < loopBound; i += vectorLength) {
-            IntVector.fromArray(IntVector.SPECIES_256, values, i)
+            IntVector.fromArray(SPECIES, values, i)
                     .intoArray(dataBuffer.getIntArray(), index + i);
         }
 
         // Handle remaining elements
         for (int i = loopBound; i < values.length; i++) {
             set(index + i, values[i]);
-        }
-
-        if (nullable) {
-            for (int i = 0; i < values.length; i++) {
-                BitVectorHelper.setBit(validityBuffer, index + i);
-            }
         }
 
         valueCount = Math.max(valueCount, index + values.length);
